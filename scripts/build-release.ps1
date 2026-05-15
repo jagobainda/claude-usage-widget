@@ -100,6 +100,8 @@ if ($LASTEXITCODE -ne 0) { Write-Error "pip upgrade failed."; exit 1 }
 if ($LASTEXITCODE -ne 0) { Write-Error "pip install requirements failed."; exit 1 }
 & $Pip install pyinstaller --quiet
 if ($LASTEXITCODE -ne 0) { Write-Error "pip install pyinstaller failed."; exit 1 }
+& $Pip install resvg-py --quiet
+if ($LASTEXITCODE -ne 0) { Write-Error "pip install resvg-py failed."; exit 1 }
 
 # ── Icon ──────────────────────────────────────────────────────────────────────
 Write-Host "[3/5] Generating app.ico..." -ForegroundColor Yellow
