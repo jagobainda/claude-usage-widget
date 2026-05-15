@@ -17,9 +17,12 @@
     before the registry entry exists.
 
 .PARAMETER ExePath
-    Path to the widget .exe. If omitted, looks at:
-      1. releases\ClaudeUsageWidget-*.exe (most recent)
-      2. dist\ClaudeUsageWidget.exe
+    Path to the widget .exe. If omitted, looks at (in order):
+      1. %LocalAppData%\ClaudeUsageWidget\ClaudeUsageWidget.exe (installed)
+      2. releases\ClaudeUsageWidget-*.exe (most recent build, repo only)
+      3. dist\ClaudeUsageWidget.exe (PyInstaller output, repo only)
+    The repo-relative fallbacks are skipped when the script is invoked
+    remotely (e.g. via `irm ... | iex`) since $PSScriptRoot is empty.
 
 .PARAMETER NoRestart
     Skip the explorer.exe restart at the end. The change will then take
@@ -39,22 +42,32 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = Split-Path $PSScriptRoot -Parent
-
 # ── Resolve target exe ────────────────────────────────────────────────────────
 if (-not $ExePath) {
-    $candidate = Get-ChildItem (Join-Path $RepoRoot "releases\ClaudeUsageWidget*.exe") -ErrorAction SilentlyContinue |
-                 Sort-Object LastWriteTime -Descending |
-                 Select-Object -First 1
-    if (-not $candidate) {
-        $fallback = Join-Path $RepoRoot "dist\ClaudeUsageWidget.exe"
-        if (Test-Path $fallback) { $candidate = Get-Item $fallback }
+    $candidates = @(
+        # Installed location (works whether the script runs from the repo
+        # or remotely via `irm ... | iex`).
+        (Join-Path $env:LOCALAPPDATA "ClaudeUsageWidget\ClaudeUsageWidget.exe")
+    )
+
+    # If we are running as a real .ps1 file inside the repo, also look at
+    # the build outputs. $PSScriptRoot is empty when invoked via iex, so
+    # this block is silently skipped in that case.
+    if ($PSScriptRoot) {
+        $RepoRoot = Split-Path $PSScriptRoot -Parent
+        $latestRelease = Get-ChildItem (Join-Path $RepoRoot "releases\ClaudeUsageWidget*.exe") -ErrorAction SilentlyContinue |
+                         Sort-Object LastWriteTime -Descending |
+                         Select-Object -First 1 -ExpandProperty FullName
+        if ($latestRelease) { $candidates += $latestRelease }
+        $candidates += (Join-Path $RepoRoot "dist\ClaudeUsageWidget.exe")
     }
-    if (-not $candidate) {
-        Write-Error "No exe found. Pass -ExePath explicitly or build first with scripts\build-release.ps1."
+
+    $found = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if (-not $found) {
+        Write-Error "No widget .exe found. Tried:`n  $($candidates -join "`n  ")`nPass -ExePath explicitly or install the widget first."
         exit 1
     }
-    $ExePath = $candidate.FullName
+    $ExePath = $found
 }
 
 if (-not (Test-Path $ExePath)) {

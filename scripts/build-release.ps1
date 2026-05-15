@@ -22,17 +22,26 @@
 .PARAMETER Version
     Version label appended to the output filename. Defaults to 1.0.0.
 
+.PARAMETER Installer
+    Also build a per-user Inno Setup installer
+    (releases\ClaudeUsageWidget-Setup-<version>.exe). Requires Inno Setup 6:
+        winget install JRSoftware.InnoSetup
+    When combined with -Sign, the installer .exe is also signed.
+
 .EXAMPLE
     .\scripts\build-release.ps1
     .\scripts\build-release.ps1 -Sign -CertThumbprint "20ed2e50..."
     .\scripts\build-release.ps1 -Version "1.2.0" -Sign -CertThumbprint "20ed2e50..."
+    .\scripts\build-release.ps1 -Version "1.2.0" -Installer
+    .\scripts\build-release.ps1 -Version "1.2.0" -Installer -Sign -CertThumbprint "20ed2e50..."
 #>
 
 param(
     [switch]$Sign,
     [string]$CertThumbprint = "",
     [string]$KeyInfoFile = "C:\Users\Jagoba\keyinfo.inf",
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.0",
+    [switch]$Installer
 )
 
 Set-StrictMode -Version Latest
@@ -43,6 +52,14 @@ $TimestampUrl = "http://time.certum.pl"
 $SigntoolExe  = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
 $AppName      = "ClaudeUsageWidget"
 $AppDisplay   = "Claude Usage Widget"
+
+# Inno Setup may live per-machine or per-user. Pick whichever exists first.
+$IsccCandidates = @(
+    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    "C:\Program Files\Inno Setup 6\ISCC.exe",
+    (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe")
+)
+$IsccExe = $IsccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 $RepoRoot   = Split-Path $PSScriptRoot -Parent
@@ -56,6 +73,7 @@ $VenvDir    = Join-Path $RepoRoot ".venv"
 $Python     = Join-Path $VenvDir "Scripts\python.exe"
 $Pip        = Join-Path $VenvDir "Scripts\pip.exe"
 $MakeIcon   = Join-Path $PSScriptRoot "_make_icon.py"
+$IssFile    = Join-Path $RepoRoot "installer\ClaudeUsageWidget.iss"
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -64,6 +82,9 @@ Write-Host "  Version : $Version" -ForegroundColor Cyan
 if ($Sign) {
     Write-Host "  Signing : Enabled (Certum smart card)" -ForegroundColor Cyan
     Write-Host "  Thumbprint: $CertThumbprint" -ForegroundColor Cyan
+}
+if ($Installer) {
+    Write-Host "  Installer: Enabled (Inno Setup, per-user)" -ForegroundColor Cyan
 }
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
@@ -79,6 +100,19 @@ if ($Sign) {
     }
     if (-not (Test-Path $KeyInfoFile)) {
         Write-Error "keyinfo.inf not found at: $KeyInfoFile"
+        exit 1
+    }
+}
+
+# ── Validate installer prerequisites ──────────────────────────────────────────
+if ($Installer) {
+    if (-not $IsccExe) {
+        Write-Error "Inno Setup compiler (ISCC.exe) not found.`nLooked in:`n  $($IsccCandidates -join "`n  ")`nInstall it with:`n    winget install JRSoftware.InnoSetup"
+        exit 1
+    }
+    Write-Host "Using ISCC: $IsccExe" -ForegroundColor DarkGray
+    if (-not (Test-Path $IssFile)) {
+        Write-Error ".iss script not found at: $IssFile"
         exit 1
     }
 }
@@ -160,5 +194,36 @@ $ReleaseExe = Join-Path $ReleaseDir "$AppName-$Version.exe"
 Copy-Item $ExePath $ReleaseExe -Force
 
 Write-Host ""
-Write-Host "✅ Build complete: $ReleaseExe" -ForegroundColor Green
+Write-Host "✅ Portable build complete: $ReleaseExe" -ForegroundColor Green
 Get-Item $ReleaseExe | Format-Table Name, Length, LastWriteTime -AutoSize
+
+# ── Installer ─────────────────────────────────────────────────────────────────
+if ($Installer) {
+    Write-Host "[6/6] Building installer with Inno Setup..." -ForegroundColor Yellow
+    & $IsccExe "/DAppVersion=$Version" "/DRepoRoot=$RepoRoot" $IssFile
+    if ($LASTEXITCODE -ne 0) { Write-Error "ISCC failed."; exit 1 }
+
+    $SetupExe = Join-Path $ReleaseDir "$AppName-Setup-$Version.exe"
+    if (-not (Test-Path $SetupExe)) {
+        Write-Error "Expected installer not found at: $SetupExe"; exit 1
+    }
+
+    if ($Sign) {
+        Write-Host "Signing installer..." -ForegroundColor Yellow
+        & $SigntoolExe sign `
+            /sha1 $CertThumbprint `
+            /tr $TimestampUrl `
+            /td SHA256 `
+            /fd SHA256 `
+            /d "$AppDisplay Setup" `
+            $SetupExe
+        if ($LASTEXITCODE -ne 0) { Write-Error "signtool sign on installer failed."; exit 1 }
+
+        & $SigntoolExe verify /pa $SetupExe
+        if ($LASTEXITCODE -ne 0) { Write-Error "signtool verify on installer failed."; exit 1 }
+    }
+
+    Write-Host ""
+    Write-Host "✅ Installer ready: $SetupExe" -ForegroundColor Green
+    Get-Item $SetupExe | Format-Table Name, Length, LastWriteTime -AutoSize
+}
