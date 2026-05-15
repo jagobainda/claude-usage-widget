@@ -31,11 +31,13 @@ def fetch_usage(tok: OAuthToken) -> tuple[Usage, OAuthToken]:
         tok = refresh_token(tok)
     headers = dict(API_HEADERS_BASE)
     headers["Authorization"] = f"Bearer {tok.access_token}"
-    r = requests.get(USAGE_URL, headers=headers, timeout=20)
+    # (connect, read) timeouts: fail fast on network outages so the worker's
+    # watchdog can dispatch a fresh attempt as soon as connectivity returns.
+    r = requests.get(USAGE_URL, headers=headers, timeout=(5, 15))
     if r.status_code == 401:
         tok = refresh_token(tok)
         headers["Authorization"] = f"Bearer {tok.access_token}"
-        r = requests.get(USAGE_URL, headers=headers, timeout=20)
+        r = requests.get(USAGE_URL, headers=headers, timeout=(5, 15))
     r.raise_for_status()
     j = r.json()
 

@@ -109,7 +109,7 @@ def refresh_token(tok: OAuthToken) -> OAuthToken:
         "refresh_token": tok.refresh_token,
         "client_id": OAUTH_CLIENT_ID,
     }
-    r = requests.post(TOKEN_URL, json=body, timeout=20)
+    r = requests.post(TOKEN_URL, json=body, timeout=(5, 15))
     r.raise_for_status()
     j = r.json()
     expires_in = int(j.get("expires_in", 3600))
