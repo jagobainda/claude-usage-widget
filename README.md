@@ -6,6 +6,10 @@
 
 A small Windows system-tray widget that shows your current Claude Code usage (5-hour and 7-day windows) in real time.
 
+<br>
+
+<img src="claude_widget/widget-screenshot.png" alt="Widget in the Windows system tray">
+
 </div>
 
 ---
