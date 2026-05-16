@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="claude_widget/claude_icon.svg" alt="Claude" width="96" height="96">
+<img src="claude_widget/claude_icon.svg" alt="Claude" width="70" height="70">
 
 # Claude Usage Widget
 
