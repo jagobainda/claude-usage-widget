@@ -8,7 +8,7 @@ A small Windows system-tray widget that shows your current Claude Code usage (5-
 
 <br>
 
-<img src="claude_widget/widget-screenshot.png" alt="Widget in the Windows system tray">
+<img src="claude_widget/widget-screenrecord.gif" alt="Widget in the Windows system tray">
 
 </div>
 
