@@ -14,6 +14,17 @@ import requests
 from .config import OAUTH_CLIENT_ID, TOKEN_PATH_CANDIDATES, TOKEN_URL
 
 
+class RefreshTokenError(Exception):
+    """The OAuth server rejected the stored refresh token (HTTP 400).
+
+    Anthropic rotates refresh tokens on every use, so the copy held in memory
+    goes stale whenever another client (typically the Claude Code CLI)
+    refreshes first and rewrites the credentials file. Callers should reload
+    the credentials from disk and retry once; if it still fails the refresh
+    token is genuinely dead and the user must sign in again.
+    """
+
+
 @dataclass
 class OAuthToken:
     access_token: str
@@ -110,6 +121,17 @@ def refresh_token(tok: OAuthToken) -> OAuthToken:
         "client_id": OAUTH_CLIENT_ID,
     }
     r = requests.post(TOKEN_URL, json=body, timeout=(5, 15))
+    if r.status_code == 400:
+        # invalid_grant / invalid_request: the refresh token is no longer
+        # accepted. Surface it as a distinct, recoverable-by-reload signal
+        # rather than a generic HTTPError the caller can't reason about.
+        detail = ""
+        try:
+            j = r.json()
+            detail = j.get("error_description") or j.get("error") or ""
+        except Exception:
+            pass
+        raise RefreshTokenError(detail or "refresh token rejected")
     r.raise_for_status()
     j = r.json()
     expires_in = int(j.get("expires_in", 3600))

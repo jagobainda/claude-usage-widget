@@ -158,6 +158,8 @@ Remove-Item $pyiWork -Recurse -Force -ErrorAction SilentlyContinue
     --workpath $pyiWork `
     --specpath $BuildDir `
     --hidden-import pystray._win32 `
+    --hidden-import truststore `
+    --collect-submodules truststore `
     $Main
 if ($LASTEXITCODE -ne 0) { Write-Error "PyInstaller failed."; exit 1 }
 
