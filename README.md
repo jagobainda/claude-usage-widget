@@ -28,7 +28,7 @@ There are two ways to install it: use the pre-built `.exe` (recommended) or run 
 
 ### Option A — Installer / `.exe` (recommended)
 
-1. Download the latest version from the [installer](https://cdn.jagoba.dev/downloads/claude-usage-widget/ClaudeUsageWidget-Setup-1.0.2.exe).
+1. Download the latest version from the [installer](https://cdn.jagoba.dev/downloads/claude-usage-widget/ClaudeUsageWidget-Setup-1.0.3.exe).
 2. Run the installer (`ClaudeUsageWidget-Setup-x.y.z.exe`).
 3. The widget will appear in the system tray. Left-click opens the popup with the details, right-click shows the menu (refresh / quit).
 4. **(Highly recommended)** Pull the icon out of the tray overflow flyout (`^`) so it is always visible on the taskbar. Once the widget has run at least once, open **PowerShell** and run:
