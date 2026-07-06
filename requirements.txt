@@ -1,5 +1,5 @@
 pystray>=0.19.5
-Pillow>=12.2.0
+Pillow>=12.3.0
 requests>=2.34.2
 aggdraw>=1.4.1
 truststore>=0.10.4
