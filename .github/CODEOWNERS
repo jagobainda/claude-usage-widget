@@ -1,0 +1,7 @@
+# Dependencias de Python
+
+/requirements.txt @jagobainda
+
+# GitHub Actions
+
+/.github/workflows/ @jagobainda
