@@ -95,12 +95,17 @@ class AppState:
         self.last_error = None
         if self.icon is not None:
             self.icon.icon = usage_icon(usage)
-            pct = usage.five_hour.utilization * 100
-            self.icon.title = (
-                f"Claude Code\n"
-                f"5h: {int(round(pct))}%  ·  7d: {int(round(usage.seven_day.utilization*100))}%\n"
-                f"5h reset: {format_until(usage.five_hour.resets_at)}"
+            summary = "  ·  ".join(
+                f"{lim.short_label}: {int(round(lim.utilization * 100))}%"
+                for lim in usage.limits
             )
+            primary = usage.primary
+            lines = ["Claude Code"]
+            if summary:
+                lines.append(summary)
+            if primary is not None:
+                lines.append(f"{primary.short_label} reset: {format_until(primary.resets_at)}")
+            self.icon.title = "\n".join(lines)
         self._result_ready.set()
         self._notify()
 

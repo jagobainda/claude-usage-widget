@@ -95,7 +95,8 @@ def make_icon(text: str, color: tuple[int, int, int],
 
 
 def usage_icon(usage: Usage, size: int = ICON_SIZE) -> Image.Image:
-    pct = usage.five_hour.utilization
+    primary = usage.primary
+    pct = primary.utilization if primary is not None else 0.0
     text = f"{int(round(pct * 100))}"
     return make_icon(text, status_color_rgb(pct), size=size)
 

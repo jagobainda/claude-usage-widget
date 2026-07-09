@@ -12,7 +12,7 @@ from .icons import claude_logo
 from .utils import format_until
 
 if TYPE_CHECKING:
-    from .api import Usage, WindowUsage
+    from .api import LimitUsage, Usage
     from .state import AppState
 
 
@@ -161,14 +161,13 @@ class PopupWindow:
         self.content = tk.Frame(self.body, bg=Theme.BG)
         self.content.pack(fill="both", expand=True, padx=self.PAD, pady=(8, self.PAD))
 
-        # Bars / labels (created lazily in _render).
+        # Cards / labels (created lazily in _render, one card per usage limit).
         self._content_widgets: list[tk.Widget] = []
-        self._5h_bar: Optional[RoundedProgress] = None
-        self._7d_bar: Optional[RoundedProgress] = None
-        self._5h_pct: Optional[tk.Label] = None
-        self._7d_pct: Optional[tk.Label] = None
-        self._5h_reset: Optional[tk.Label] = None
-        self._7d_reset: Optional[tk.Label] = None
+        # Per-card (pct_lbl, bar, reset_lbl), aligned with usage.limits order.
+        self._cards: list[tuple[tk.Label, RoundedProgress, tk.Label]] = []
+        # Limit kinds currently rendered, so we only rebuild when the set of
+        # limits changes rather than on every value refresh.
+        self._rendered_keys: tuple[str, ...] = ()
         self._fetched_label: Optional[tk.Label] = None
         self._error_label: Optional[tk.Label] = None
 
@@ -292,9 +291,8 @@ class PopupWindow:
         for w in self._content_widgets:
             w.destroy()
         self._content_widgets.clear()
-        self._5h_bar = self._7d_bar = None
-        self._5h_pct = self._7d_pct = None
-        self._5h_reset = self._7d_reset = None
+        self._cards.clear()
+        self._rendered_keys = ()
         self._fetched_label = None
         self._error_label = None
 
@@ -328,13 +326,11 @@ class PopupWindow:
                 self._error_label.pack(fill="x", pady=(0, 6))
                 self._content_widgets.append(self._error_label)
         else:
-            card1, _t1, self._5h_pct, self._5h_bar, self._5h_reset = (
-                self._build_card("5-hour window")
-            )
-            card2, _t2, self._7d_pct, self._7d_bar, self._7d_reset = (
-                self._build_card("7-day window")
-            )
-            self._content_widgets.extend([card1, card2])
+            for lim in usage.limits:
+                card, _title, pct_lbl, bar, reset_lbl = self._build_card(lim.label)
+                self._content_widgets.append(card)
+                self._cards.append((pct_lbl, bar, reset_lbl))
+            self._rendered_keys = tuple(lim.kind for lim in usage.limits)
 
             self._fetched_label = tk.Label(
                 self.content,
@@ -353,15 +349,15 @@ class PopupWindow:
         self.root.update_idletasks()
 
     def _update_values(self, usage: "Usage") -> None:
-        self._set_window_values(usage.five_hour, self._5h_pct, self._5h_bar, self._5h_reset)
-        self._set_window_values(usage.seven_day, self._7d_pct, self._7d_bar, self._7d_reset)
+        for (pct_lbl, bar, reset_lbl), lim in zip(self._cards, usage.limits):
+            self._set_window_values(lim, pct_lbl, bar, reset_lbl)
         if self._fetched_label is not None:
             ts = usage.fetched_at.astimezone().strftime("%H:%M:%S")
             self._fetched_label.configure(text=f"Updated · {ts}")
 
     def _set_window_values(
         self,
-        win: "WindowUsage",
+        win: "LimitUsage",
         pct_lbl: Optional[tk.Label],
         bar: Optional[RoundedProgress],
         reset_lbl: Optional[tk.Label],
@@ -395,10 +391,12 @@ class PopupWindow:
             self._update_title_icon()
         except Exception:
             pass
-        # If we previously had no usage and now we do (or vice versa), rebuild.
+        # Rebuild when the set of limits changes (first data, or a limit
+        # appearing/disappearing — e.g. a scoped model window activating);
+        # otherwise just refresh the values in place.
         usage = self.state.usage
-        bars_exist = self._5h_bar is not None
-        if (usage is not None) != bars_exist:
+        keys = tuple(lim.kind for lim in usage.limits) if usage is not None else ()
+        if keys != self._rendered_keys:
             self._render()
         elif usage is not None:
             self._update_values(usage)
