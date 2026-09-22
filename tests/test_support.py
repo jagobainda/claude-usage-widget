@@ -11,6 +11,7 @@ for relative in (
     "packages/widget-common",
     "apps/claude-usage-widget",
     "apps/codex-usage-widget",
+    "apps/opencode-usage-widget",
 ):
     path = str(REPO_ROOT / relative)
     if path not in sys.path:

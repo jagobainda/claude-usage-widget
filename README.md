@@ -1,11 +1,12 @@
 # Windows Usage Widgets
 
-Monorepo con dos widgets independientes para la bandeja de Windows:
+Monorepo con tres widgets independientes para la bandeja de Windows:
 
 - **Claude Usage Widget** muestra las ventanas de consumo de Claude Code.
 - **Codex Usage Widget** muestra las ventanas que expone OpenAI Codex CLI.
+- **OpenCode Usage Widget** muestra las ventanas de la suscripción OpenCode Go.
 
-Ambos ofrecen porcentaje en el icono, popup con todas las ventanas disponibles,
+Los tres ofrecen porcentaje en el icono, popup con todas las ventanas disponibles,
 cuenta atrás hasta el reinicio, refresco automático/manual y estados de carga,
 error o sesión no iniciada. Tienen nombres de bandeja, procesos, ejecutables,
 directorios de instalación y entradas de autoarranque distintos, por lo que se
@@ -17,6 +18,7 @@ pueden ejecutar simultáneamente.
 apps/
   claude-usage-widget/     # autenticación y API de Claude
   codex-usage-widget/      # cliente oficial codex app-server
+  opencode-usage-widget/   # credencial local y endpoint de OpenCode Go
 packages/
   widget-common/           # pystray, Tkinter, popup, scheduler, iconos y fechas
 installer/                 # un script Inno Setup por aplicación
@@ -40,6 +42,9 @@ capa común solo conoce modelos de uso neutrales y la experiencia de escritorio.
   exclusivamente el protocolo oficial
   [`codex app-server`](https://developers.openai.com/codex/app-server/); no lee,
   copia ni renueva manualmente `~/.codex/auth.json`.
+- Para OpenCode: [OpenCode](https://opencode.ai/docs/) configurado con una
+  suscripción Go. El widget lee exclusivamente la entrada `opencode-go` de
+  `%USERPROFILE%\.local\share\opencode\auth.json` y nunca modifica ese archivo.
 
 ## Autenticación
 
@@ -62,12 +67,27 @@ crea conversaciones, hilos o turnos y no consume inferencia. Si el CLI no está
 instalado, no hay sesión o la versión no soporta el método, el popup muestra una
 explicación sin exponer datos de cuenta.
 
+OpenCode Go (dentro de la TUI de OpenCode):
+
+```text
+/connect
+OpenCode Go
+```
+
+OpenCode Usage Widget consulta `GET https://opencode.ai/zen/go/v1/usage` con la
+clave que OpenCode ya tiene guardada. La respuesta incluye las ventanas móvil
+de cinco horas, semanal y mensual. La consulta no crea sesiones ni consume
+inferencia.
+
 > [!WARNING]
 >
 > Claude Usage Widget consulta actualmente el endpoint privado y no documentado
 > que utiliza Claude Code. Anthropic puede modificarlo o retirarlo sin aviso.
 > Codex Usage Widget, en cambio, usa el App Server oficial de OpenAI y requiere
 > una versión de Codex CLI compatible con los métodos de cuenta.
+> OpenCode Usage Widget usa una ruta implementada por OpenCode, pero todavía no
+> documentada como contrato estable. Solo expone OpenCode Go: no incluye saldo
+> Zen ni consumo de proveedores externos.
 
 ## Ejecutar desde código fuente
 
@@ -97,8 +117,14 @@ Codex:
 python .\apps\codex-usage-widget\main.py
 ```
 
-Para usar ambos a la vez, ejecuta cada comando en una terminal distinta. Los
-identificadores internos son `claude-usage` y `codex-usage`.
+OpenCode:
+
+```powershell
+python .\apps\opencode-usage-widget\main.py
+```
+
+Para usar los tres a la vez, ejecuta cada comando en una terminal distinta. Los
+identificadores internos son `claude-usage`, `codex-usage` y `opencode-usage`.
 
 ## Pruebas
 
@@ -112,16 +138,18 @@ python -m unittest discover -s tests -v
 Cubren los formatos actuales y heredados de Claude, ventanas primarias,
 secundarias y múltiples `limitId` de Codex, campos desconocidos, timestamps,
 etiquetas por duración, correlación JSONL, notificaciones intercaladas, timeout,
-reinicio y cierre del subproceso.
+reinicio y cierre del subproceso. Para OpenCode cubren credenciales locales,
+porcentajes, ventanas parciales, respuestas incompatibles y errores HTTP.
 
 ## Compilar ejecutables
 
-El script compartido acepta `claude`, `codex` o `all`. Si se omite `-App`, se
+El script compartido acepta `claude`, `codex`, `opencode` o `all`. Si se omite `-App`, se
 compila Claude para conservar el comportamiento del comando anterior.
 
 ```powershell
 .\scripts\build-release.ps1 -App claude -Version "1.1.0"
 .\scripts\build-release.ps1 -App codex  -Version "1.1.0"
+.\scripts\build-release.ps1 -App opencode -Version "1.1.0"
 .\scripts\build-release.ps1 -App all    -Version "1.1.0"
 ```
 
@@ -130,8 +158,10 @@ Los binarios independientes quedan en:
 ```text
 dist\ClaudeUsageWidget.exe
 dist\CodexUsageWidget.exe
+dist\OpenCodeUsageWidget.exe
 releases\ClaudeUsageWidget-1.1.0.exe
 releases\CodexUsageWidget-1.1.0.exe
+releases\OpenCodeUsageWidget-1.1.0.exe
 ```
 
 La firma opcional mantiene los parámetros existentes:
@@ -149,6 +179,7 @@ Instala Inno Setup 6 (`winget install JRSoftware.InnoSetup`) y añade
 ```powershell
 .\scripts\build-release.ps1 -App claude -Version "1.1.0" -Installer
 .\scripts\build-release.ps1 -App codex  -Version "1.1.0" -Installer
+.\scripts\build-release.ps1 -App opencode -Version "1.1.0" -Installer
 .\scripts\build-release.ps1 -App all    -Version "1.1.0" -Installer
 ```
 
@@ -157,6 +188,7 @@ Los instaladores se generan sin sobrescribirse:
 ```text
 releases\ClaudeUsageWidget-Setup-1.1.0.exe
 releases\CodexUsageWidget-Setup-1.1.0.exe
+releases\OpenCodeUsageWidget-Setup-1.1.0.exe
 ```
 
 Cada instalador usa su propio GUID, directorio bajo `%LocalAppData%`, acceso del
@@ -167,7 +199,9 @@ credenciales administradas por los CLI oficiales.
 
 Claude conserva su marca actual. Codex usa por ahora un símbolo geométrico
 neutral y original incluido en el código; no reutiliza el logotipo de Claude ni
-pretende ser una marca oficial de OpenAI.
+pretende ser una marca oficial de OpenAI. OpenCode usa el primer glifo de su
+logotipo monocromo publicado bajo la licencia MIT del proyecto original, con el
+gris como color de énfasis del widget.
 
 ## Licencia
 

@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Builds one or both Windows usage widgets and optionally their installers.
+    Builds one or all Windows usage widgets and optionally their installers.
 
 .PARAMETER App
-    claude (default), codex, or all. The default preserves the original
+    claude (default), codex, opencode, or all. The default preserves the original
     repository command behaviour.
 
 .PARAMETER Sign
@@ -15,11 +15,12 @@
 .EXAMPLE
     .\scripts\build-release.ps1 -App claude -Version "1.1.0"
     .\scripts\build-release.ps1 -App codex -Version "1.1.0" -Installer
+    .\scripts\build-release.ps1 -App opencode -Version "1.1.0" -Installer
     .\scripts\build-release.ps1 -App all -Version "1.1.0"
 #>
 
 param(
-    [ValidateSet("claude", "codex", "all")]
+    [ValidateSet("claude", "codex", "opencode", "all")]
     [string]$App = "claude",
     [switch]$Sign,
     [string]$CertThumbprint = "",
@@ -57,6 +58,13 @@ $Applications = @{
         Main = Join-Path $RepoRoot "apps\codex-usage-widget\main.py"
         AppPath = Join-Path $RepoRoot "apps\codex-usage-widget"
         Installer = Join-Path $RepoRoot "installer\CodexUsageWidget.iss"
+    }
+    opencode = @{
+        Name = "OpenCodeUsageWidget"
+        Display = "OpenCode Usage Widget"
+        Main = Join-Path $RepoRoot "apps\opencode-usage-widget\main.py"
+        AppPath = Join-Path $RepoRoot "apps\opencode-usage-widget"
+        Installer = Join-Path $RepoRoot "installer\OpenCodeUsageWidget.iss"
     }
 }
 
@@ -168,6 +176,12 @@ function Invoke-AppBuild {
             "--add-data", "${CodexIcon};codex_widget"
         )
     }
+    if ($AppKey -eq "opencode") {
+        $OpenCodeIcon = Join-Path $Definition.AppPath "opencode_widget\opencode_logo.svg"
+        $PyInstallerArgs += @(
+            "--add-data", "${OpenCodeIcon};opencode_widget"
+        )
+    }
     $PyInstallerArgs += $Definition.Main
     & $Python @PyInstallerArgs
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed for $AppKey" }
@@ -195,7 +209,7 @@ function Invoke-AppBuild {
     }
 }
 
-$Targets = if ($App -eq "all") { @("claude", "codex") } else { @($App) }
+$Targets = if ($App -eq "all") { @("claude", "codex", "opencode") } else { @($App) }
 foreach ($Target in $Targets) {
     Invoke-AppBuild -AppKey $Target
 }

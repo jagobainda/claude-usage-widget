@@ -22,6 +22,10 @@ def _logo_factory(app: str):
         from codex_widget.branding import codex_logo
 
         return codex_logo
+    if app == "opencode":
+        from opencode_widget.branding import opencode_logo
+
+        return opencode_logo
     raise ValueError(f"unknown app: {app}")
 
 
@@ -31,7 +35,10 @@ def main() -> int:
     elif len(sys.argv) == 4 and sys.argv[1] == "--app":
         app, output = sys.argv[2].lower(), sys.argv[3]
     else:
-        print("usage: _make_icon.py [--app claude|codex] <out.ico>", file=sys.stderr)
+        print(
+            "usage: _make_icon.py [--app claude|codex|opencode] <out.ico>",
+            file=sys.stderr,
+        )
         return 2
 
     out = Path(output)
