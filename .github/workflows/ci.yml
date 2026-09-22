@@ -30,7 +30,7 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   build:
-    name: Build both widgets (unsigned)
+    name: Build all widgets (unsigned)
     needs: test
     runs-on: windows-latest
     steps:
@@ -53,4 +53,5 @@ jobs:
           path: |
             releases/ClaudeUsageWidget-ci.exe
             releases/CodexUsageWidget-ci.exe
+            releases/OpenCodeUsageWidget-ci.exe
           if-no-files-found: error
