@@ -7,6 +7,8 @@ Each widget displays the percentage used directly in its tray icon. Open it to
 view every available usage window, the time remaining until each reset, and
 when the data was last updated.
 
+![Demo de los tres widgets](assets/widgets-overview.gif)
+
 ## Download and install
 
 | Widget | Information displayed | Installer |
