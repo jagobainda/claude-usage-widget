@@ -5,7 +5,6 @@ from __future__ import annotations
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 from .models import Usage
-from .theme import status_color_rgb
 
 
 ICON_SIZE = 64
@@ -24,7 +23,6 @@ def make_icon(
     text: str,
     color: tuple[int, int, int],
     size: int = ICON_SIZE,
-    shadow_color: str | tuple[int, int, int] | None = None,
 ) -> Image.Image:
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
@@ -45,32 +43,21 @@ def make_icon(
     width, height = bbox[2] - bbox[0], bbox[3] - bbox[1]
     x = (size - width) / 2 - bbox[0]
     y = (size - height) / 2 - bbox[1]
-    if shadow_color is not None:
-        offset = max(1, round(size * 6 / ICON_SIZE))
-        x -= offset / 2
-        y -= offset / 2
-        draw.text(
-            (x + offset, y + offset),
-            text,
-            fill=ImageColor.getrgb(shadow_color) + (220,),
-            font=font,
-        )
     draw.text((x, y), text, fill=color + (255,), font=font)
     return image
 
 
 def usage_icon(
     usage: Usage,
+    color: str,
     size: int = ICON_SIZE,
-    shadow_color: str | tuple[int, int, int] | None = None,
 ) -> Image.Image:
     primary = usage.primary
     utilization = primary.utilization if primary is not None else 0.0
     return make_icon(
         str(int(round(utilization * 100))),
-        status_color_rgb(utilization),
+        ImageColor.getrgb(color),
         size=size,
-        shadow_color=shadow_color,
     )
 
 

@@ -40,13 +40,3 @@ def status_color_hex(utilization: float) -> str:
     if utilization >= 0.50:
         return Theme.WARN_LOW
     return Theme.OK
-
-
-def status_color_rgb(utilization: float) -> tuple[int, int, int]:
-    if utilization >= 0.90:
-        return (230, 73, 96)
-    if utilization >= 0.75:
-        return (255, 153, 51)
-    if utilization >= 0.50:
-        return (240, 196, 25)
-    return (62, 207, 99)

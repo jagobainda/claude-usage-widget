@@ -83,7 +83,7 @@ class AppState:
         if self.icon is not None:
             self.icon.icon = usage_icon(
                 usage,
-                shadow_color=self.config.accent,
+                color=self.config.accent,
             )
             summary = "  ·  ".join(
                 f"{limit.short_label}: {int(round(limit.utilization * 100))}%"
